@@ -532,5 +532,701 @@ ls -l | wc -l                      # Count items in directory
 
 ---
 
-**Last Updated:** March 11, 2026  
-**Next Session:** Module 5 - System Administration
+---
+
+### Module 5: System Administration (Mar 11-18, 2026) ✅ COMPLETE!
+
+**Topics Covered:**
+- User account management (useradd, usermod, userdel)
+- sudo access and privileges
+- Monitoring users and system activity
+- System utility commands (date, uptime, hostname, uname)
+- Process management (ps, top, kill)
+- Scheduling tasks with crontab
+- System monitoring (df, free, netstat)
+- System logs (/var/log)
+- Finding system information
+- Environment variables
+
+---
+
+### User Account Management 👥
+
+**Creating and Managing Users:**
+
+```bash
+# Create user (basic - no home directory)
+useradd spiderman
+id spiderman                # Verify user created
+uid=1002(spiderman) gid=1002(spiderman)
+
+# Delete user
+userdel spiderman
+
+# Create user WITH home directory
+useradd -m spiderman
+ls -ltr /home               # Verify home directory created
+drwx------ 5 spiderman spiderman 4096 Mar 16 11:43 spiderman
+
+# Create user with all options
+useradd -g superheros -s /bin/bash -c "Ironman" -m -d /home/ironman ironman
+# -g = primary group
+# -s = shell
+# -c = comment/description
+# -m = create home directory
+# -d = home directory path
+
+# Set password
+passwd ironman
+# Enter: sagar12345 (example)
+
+# Verify in system files
+cat /etc/passwd | grep ironman
+ironman:x:1003:1003:Ironman:/home/ironman:/bin/bash
+
+cat /etc/shadow | grep ironman
+ironman:!:20528:0:99999:7:::
+```
+
+**Managing Groups:**
+
+```bash
+# Create group
+groupadd superheros
+
+# Verify group created
+grep superheros /etc/group
+superheros:x:1003:
+
+# Delete group
+groupdel nonewgroup
+
+# Add user to group
+usermod -G superheros spiderman
+
+# Verify user in group
+grep spiderman /etc/group
+superheros:x:1003:spiderman
+spiderman:x:1002:
+
+# Change group ownership of directory
+chgrp -R superheros /home/spiderman
+ls -ltr /home
+drwx------ 5 spiderman superheros 4096 Mar 16 11:43 spiderman
+```
+
+**Key Files:**
+- `/etc/passwd` - User account information
+- `/etc/group` - Group information  
+- `/etc/shadow` - Encrypted passwords
+
+---
+
+### sudo Access and Privileges 🔐
+
+**Understanding su vs sudo:**
+
+| Command | Password Required | Description |
+|---------|------------------|-------------|
+| `su - username` | Target user's password | Switch to another user |
+| `su -` | Root password | Switch to root |
+| `sudo command` | Your own password | Run command as root |
+| `sudo -i` | Your own password | Get root shell |
+
+**Practice Session:**
+
+```bash
+# Check current user
+whoami
+sagar
+
+# Try switching to root (fails without root password)
+su -
+Password: 
+su: Authentication failure
+
+# Use sudo instead (works with your password)
+sudo -i
+[sudo] password for sagar:
+# Now you're root!
+
+# Add user to sudo group (Kali/Debian)
+usermod -aG sudo sagar
+
+# Verify sudo access
+groups sagar
+sagar : sagar sudo users
+
+# Test sudo
+sudo dmidecode
+# Works! ✅
+```
+
+**Configuring sudo (Advanced):**
+
+```bash
+# Edit sudoers file (ALWAYS use visudo!)
+sudo visudo
+
+# Create wheel group (alternative sudo group)
+groupadd wheel
+usermod -aG wheel sagar
+
+# Verify
+grep wheel /etc/group
+wheel:x:1005:sagar
+
+# Switch to user and test
+su - sagar
+sudo dmidecode
+# Works! ✅
+```
+
+**SSH Login Practice:**
+
+```bash
+# Create user
+sudo -i
+useradd -m pudi
+passwd pudi
+# Password: sagar12345
+
+# Start SSH service
+service ssh start
+
+# Check IP
+ifconfig
+# IP: 172.24.58.219
+
+# Login via SSH
+ssh pudi@172.24.58.219
+# First time: yes
+# Password: sagar12345
+
+# Verify login
+whoami
+pudi
+
+pwd
+/home/pudi
+
+# Exit
+exit
+```
+
+---
+
+### Monitor Users 👀
+
+**Who's Logged In:**
+
+```bash
+# Basic who command
+who
+sagar  pts/6  2026-03-17 12:35 (172.24.58.219)
+sagar  pts/4  2026-03-17 11:59 (172.24.58.219)
+sagar  pts/2  2026-03-17 11:57 (172.24.58.219)
+sagar  pts/1  2026-03-17 11:07
+
+# Detailed view with activity
+w
+13:12:07 up 2:05, 4 users, load average: 0.19, 0.05, 0.01
+USER   TTY    FROM           LOGIN@  IDLE  JCPU  PCPU  WHAT
+sagar  pts/6  172.24.58.219  12:35   1.00s 0.10s 0.01s w
+sagar  pts/4  172.24.58.219  11:59   1.00s 0.31s 0.26s sudo -i
+
+# Login history
+last
+sagar  pts/6  172.24.58.219  Tue Mar 17 12:35 - still logged in
+pudi   pts/2  172.24.58.219  Tue Mar 17 11:53 - 11:57  (00:03)
+
+# Get unique users
+last | awk '{print $1}' | sort | uniq
+pudi
+sagar
+wtmpdb
+
+# User ID and groups
+id
+uid=1001(sagar) gid=1001(sagar) groups=1001(sagar),27(sudo),100(users)
+
+id sagar
+uid=1001(sagar) gid=1001(sagar) groups=1001(sagar),27(sudo),100(users)
+```
+
+---
+
+### System Utility Commands 🛠️
+
+```bash
+# Current date and time
+date
+Tue Mar 18 13:30:45 IST 2026
+
+# System uptime
+uptime
+13:30:45 up 2:23, 4 users, load average: 0.15, 0.08, 0.02
+
+# Hostname
+hostname
+Sagar07
+
+# System information (all)
+uname -a
+Linux Sagar07 6.6.87.2-microsoft-standard-WSL2 #1 SMP x86_64 GNU/Linux
+
+# Kernel version
+uname -r
+6.6.87.2-microsoft-standard-WSL2
+
+# Architecture
+arch
+x86_64
+
+# Hardware info (requires root)
+sudo dmidecode
+# No SMBIOS nor DMI entry point found (WSL environment)
+```
+
+---
+
+### Process Management ⚙️
+
+**Viewing Processes:**
+
+```bash
+# Show YOUR processes only
+ps
+PID TTY      TIME CMD
+896 pts/2    00:00:00 bash
+926 pts/2    00:00:00 ps
+
+# Show ALL processes
+ps -e
+PID TTY      TIME CMD
+1 ?          00:00:00 systemd
+2 ?          00:00:00 init
+104 ?        00:00:00 cron
+105 ?        00:00:00 dbus-daemon
+...
+
+# Show all with details (most useful!)
+ps aux
+USER    PID %CPU %MEM  VSZ  RSS TTY  STAT START TIME COMMAND
+root      1  0.1  0.3 24440 13952 ?   Ss   11:54 0:00 /sbin/init
+sagar   896  0.1  0.1  8420  5120 pts/2 Ss  12:06 0:00 -bash
+
+# Show all in full format
+ps -ef
+UID   PID  PPID  C STIME TTY   TIME CMD
+root    1     0  0 11:54 ?     00:00:00 /sbin/init
+sagar 896   894  0 12:06 pts/2 00:00:00 -bash
+
+# Show processes for specific user
+ps -u sagar
+PID TTY      TIME CMD
+672 ?        00:00:00 systemd
+896 pts/2    00:00:00 bash
+
+# Find specific process
+ps -ef | grep firewalld
+# (no results - firewalld not running)
+```
+
+**top Command (Live Monitoring):**
+
+```bash
+# Start top
+top
+# Shows live CPU, memory, processes
+# Press 'q' to quit
+
+# Shortcuts inside top:
+# c = show full command
+# k = kill process
+# m = sort by memory
+# p = sort by CPU
+# q = quit
+
+# Show processes for specific user
+top -u sagar
+```
+
+**kill Command:**
+
+```bash
+# List all signal types
+kill -l
+1) SIGHUP  2) SIGINT  3) SIGQUIT  9) SIGKILL  15) SIGTERM  ...
+
+# Common signals:
+# -15 (SIGTERM) = Gentle termination (default)
+# -9 (SIGKILL) = Force kill (cannot be ignored)
+# -2 (SIGINT) = Interrupt (like Ctrl+C)
+
+# Example: Kill a sleep process
+sleep 60 &
+[1] 1640
+
+ps -ef | grep sleep
+sagar  1640  1605  0 17:05 pts/3  00:00:00 sleep 60
+
+kill -9 1640
+# Process terminated! ✅
+
+# Alternative: killall (kill by name)
+killall firefox
+# Kills ALL firefox processes
+```
+
+---
+
+### Crontab - Scheduled Tasks ⏰
+
+**Cron Format:**
+
+```
+* * * * * command
+│ │ │ │ │
+│ │ │ │ └─── Day of week (0-7, Sunday = 0 or 7)
+│ │ │ └───── Month (1-12)
+│ │ └─────── Day of month (1-31)
+│ └───────── Hour (0-23)
+└─────────── Minute (0-59)
+```
+
+**Crontab Commands:**
+
+```bash
+# Edit cron jobs
+crontab -e
+
+# List cron jobs
+crontab -l
+
+# Remove all cron jobs
+crontab -r
+
+# Start cron service (WSL)
+sudo service cron start
+
+# Check if cron is running
+ps aux | grep cron
+root  104  0.0  0.0  4280  2304 ?  Ss  11:54  0:00 /usr/sbin/cron -f
+```
+
+**Example Cron Jobs:**
+
+```bash
+# Run every minute
+* * * * * echo "hello sagar" >> /home/sagar/cron-test.txt
+
+# Run at 6:30 PM daily
+30 18 * * * echo "Evening task" >> /home/sagar/evening.txt
+
+# Run every 2 minutes
+*/2 * * * * date >> /home/sagar/time-log.txt
+
+# Daily backup at 2 AM
+0 2 * * * tar -czf /home/sagar/backup.tgz /home/sagar
+```
+
+**Verify Cron Works:**
+
+```bash
+# After setting up cron job, wait 1-2 minutes
+cat /home/sagar/cron-test.txt
+hello sagar
+hello sagar
+hello sagar
+# It works! ✅
+
+# Check cron logs
+grep CRON /var/log/syslog
+```
+
+---
+
+### System Monitoring 📊
+
+**Disk Space (df):**
+
+```bash
+# Show disk usage (human-readable)
+df -h
+Filesystem   Size  Used Avail Use% Mounted on
+/dev/sda1    100G   45G   50G  47% /
+
+# Check specific directory
+df -h /home
+Filesystem   Size  Used Avail Use% Mounted on
+/dev/sda1    100G   45G   50G  47% /
+```
+
+**Memory Usage (free):**
+
+```bash
+# Show RAM usage
+free -h
+              total   used   free  shared
+Mem:          8.0G   3.2G   4.8G   200M
+Swap:         2.0G   0B     2.0G
+
+# Show in megabytes
+free -m
+              total   used   free  shared
+Mem:          8192   3276   4916   204
+Swap:         2048      0   2048
+```
+
+**Network Connections (netstat):**
+
+```bash
+# Show all listening ports with process names
+netstat -tulpn
+Proto Local Address  State      PID/Program
+tcp   0.0.0.0:22     LISTEN     990/sshd
+tcp   0.0.0.0:80     LISTEN     1234/nginx
+```
+
+**Other Monitoring:**
+
+```bash
+# I/O statistics
+iostat
+
+# System messages
+dmesg | less
+
+# CPU information
+cat /proc/cpuinfo
+
+# Memory information
+cat /proc/meminfo
+```
+
+---
+
+### System Logs 📋
+
+**Important Log Directories:**
+
+```bash
+# Main log directory
+cd /var/log
+
+# List all logs
+ls -l
+total 1192
+-rw-r--r-- 1 root root    669 Mar 18 16:58 alternatives.log
+drwxr-x--- 2 root adm    4096 Feb 16 18:01 apache2
+drwxr-xr-x 2 root root   4096 Mar 18 17:01 apt
+-rw-rw---- 1 root utmp   4224 Mar 17 13:10 btmp
+-rw-r--r-- 1 root root   9688 Mar 18 17:01 dpkg.log
+-rw-rw-r-- 1 root utmp 293460 Mar 18 20:47 lastlog
+-rw-rw-r-- 1 root utmp  31104 Mar 18 20:47 wtmp
+
+# View logs with more
+ll | more
+```
+
+**Key Log Files:**
+
+| Log File | Purpose |
+|----------|---------|
+| `/var/log/syslog` | General system messages |
+| `/var/log/auth.log` | Authentication attempts (sudo, SSH) |
+| `/var/log/dpkg.log` | Package installations |
+| `/var/log/apt/` | APT package manager logs |
+| `/var/log/wtmp` | Login records (use `last`) |
+| `/var/log/btmp` | Failed login attempts |
+
+**Note:** Some logs like `boot.log`, `maillog`, `secure` are specific to Red Hat/CentOS. In Debian/Kali, use `journalctl` or check `/var/log/syslog` and `/var/log/auth.log` instead.
+
+---
+
+### Finding System Information 🔍
+
+**System Release Info:**
+
+```bash
+# Kali/Debian version
+cat /etc/os-release
+PRETTY_NAME="Kali GNU/Linux Rolling"
+NAME="Kali GNU/Linux"
+ID=kali
+
+# Red Hat version (not available in Kali)
+cat /etc/redhat-release
+# File not found
+
+# Kernel info
+uname -a
+Linux Sagar07 6.6.87.2-microsoft-standard-WSL2 x86_64 GNU/Linux
+
+# Architecture
+arch
+x86_64
+
+# Hardware info (requires root)
+sudo dmidecode
+# dmidecode 3.6
+# No SMBIOS nor DMI entry point found (WSL limitation)
+
+# Hostname
+hostname
+Sagar07
+```
+
+---
+
+### Environment Variables 🌍
+
+**Common Environment Variables:**
+
+```bash
+# Show all environment variables
+printenv
+SHELL=/bin/bash
+HOME=/home/sagar
+USER=sagar
+PATH=/usr/local/bin:/usr/bin:/bin
+...
+
+# Show specific variables
+echo $SHELL
+/bin/bash
+
+echo $HOME
+/home/sagar
+
+echo $PATH
+/usr/local/bin:/usr/bin:/bin:/usr/games
+
+echo $USER
+sagar
+
+echo $PWD
+/home/sagar
+```
+
+**Setting Environment Variables:**
+
+```bash
+# Temporary (current session only)
+export TEST=1
+echo $TEST
+1
+
+# Permanent (add to .bashrc)
+vi ~/.bashrc
+# Add at end:
+export TEST=1
+
+# Backup original first
+cp .bashrc bashrc.orig
+
+# Reload configuration
+source ~/.bashrc
+
+# Or logout and login again
+exit
+```
+
+**Important Variables:**
+
+| Variable | Purpose |
+|----------|---------|
+| `$HOME` | User's home directory |
+| `$PATH` | Where system looks for commands |
+| `$USER` | Current username |
+| `$SHELL` | Default shell |
+| `$PWD` | Current directory |
+| `$MAIL` | Mail directory |
+
+---
+
+## 🎯 Module 5 Key Learnings
+
+### Security Best Practices:
+- ✅ Always use `sudo` instead of logging in as root
+- ✅ Create users with `-m` flag to create home directories
+- ✅ Use `passwd` immediately after creating users
+- ✅ Monitor login attempts with `last` and `/var/log/auth.log`
+- ✅ Schedule security scans with crontab
+- ✅ Regular system monitoring with `df`, `free`, `netstat`
+
+### Process Management:
+- `ps aux` - View all processes with details
+- `top` - Live process monitoring
+- `kill -9 PID` - Force terminate process
+- `ps -ef | grep name` - Find specific process
+
+### Cron Gotchas:
+- Service doesn't auto-start in WSL - must run `service cron start`
+- Use `>>` to append, not `>` (overwrites)
+- Always use absolute paths in cron jobs
+- Check `/var/log/syslog` for cron execution
+
+### Environment Variables:
+- Temporary: `export VAR=value` (current session)
+- Permanent: Add to `~/.bashrc` then `source ~/.bashrc`
+- Never store passwords in environment variables!
+
+---
+
+## 📝 Practice Exercises Completed
+
+**Exercise 1: User Management**
+- Created users: spiderman, ironman, pudi
+- Created group: superheros
+- Added users to groups
+- Set passwords
+- SSH login practice
+
+**Exercise 2: sudo Configuration**
+- Added user to sudo group
+- Created wheel group
+- Tested sudo access
+- Verified with `groups` command
+
+**Exercise 3: Process Management**
+- Viewed processes with `ps aux`
+- Monitored with `top`
+- Killed processes with `kill -9`
+- Found processes with `grep`
+
+**Exercise 4: Crontab**
+- Created scheduled tasks
+- Tested with simple echo commands
+- Verified execution
+- Checked logs
+
+**Exercise 5: System Monitoring**
+- Checked disk with `df -h`
+- Monitored memory with `free -h`
+- Viewed logs in `/var/log`
+
+**Exercise 6: Environment Variables**
+- Set TEST variable
+- Added to `.bashrc`
+- Tested persistence
+
+---
+
+## 🚀 What's Next
+
+**Remaining Modules:**
+- [x] Module 3: System Access and File System ✅
+- [x] Module 4: Linux Fundamentals ✅
+- [x] Module 5: System Administration ✅
+- [ ] Module 6: Shell Scripting Basics (Next!)
+- [ ] Module 7: SSH + Networking Commands (2 videos only)
+
+**Target:** Complete Linux by March 20, 2026  
+**Then:** Python basics starting March 21! 🐍
+
+---
+
+**Last Updated:** March 18, 2026  
+**Status:** Module 5 COMPLETE! 95% done with entire Linux course! 🎉
